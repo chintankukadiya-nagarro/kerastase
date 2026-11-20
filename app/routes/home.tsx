@@ -25,7 +25,7 @@ const HOME_QUERY = gql(
     query Home($handle: String!, $vendor: String!) {
       brandCollection: collection(handle: $handle) {
         ...CollectionCard
-        products(first: 8, filters: [{ productVendor: $vendor }]) {
+        brandProducts: products(first: 8, filters: [{ productVendor: $vendor }]) {
           nodes {
             ...ProductCard
           }
@@ -73,9 +73,9 @@ export async function loader({ context }: Route.LoaderArgs) {
   });
 
   const catalog = presentBrandCatalog(
-    data?.brandCollection?.products.nodes ?? [],
+    data?.brandCollection?.brandProducts.nodes ?? [],
     { hasNextPage: false, endCursor: null },
-    data?.brandCollection?.products.nodes.length ?? 0,
+    data?.brandCollection?.brandProducts.nodes.length ?? 0,
   );
   const featuredProducts: ProductCardData[] = catalog.products;
   const featuredCollections: CollectionCardData[] = data?.brandCollection ? [data.brandCollection] : [];
