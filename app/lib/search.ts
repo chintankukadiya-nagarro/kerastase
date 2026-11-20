@@ -3,6 +3,7 @@ import type { StorefrontClient } from "@shopify/hydrogen";
 import type { ProductFilter as StorefrontApiProductFilter } from "@shopify/hydrogen/storefront-api-types";
 
 import { PRODUCT_CARD_FRAGMENT } from "~/components/ProductCard";
+import { hideVendorFacet, literalSearchTerm, presentBrandCatalog, withBrandVendorFilter } from "~/lib/brand";
 
 export const SEARCH_PAGE_SIZE = 9;
 
@@ -110,7 +111,7 @@ export async function loadSearchPage({
   request: Request;
 }): Promise<SearchPageData> {
   const url = new URL(request.url);
-  const searchTerm = (url.searchParams.get("q") ?? "").trim();
+  const searchTerm = literalSearchTerm(url.searchParams.get("q") ?? "");
 
   if (!searchTerm) {
     return {
@@ -134,8 +135,9 @@ export async function loadSearchPage({
     term: searchTerm,
     first: SEARCH_PAGE_SIZE,
     after,
-    productFilters:
-      browse.filters.length > 0 ? (browse.filters as StorefrontApiProductFilter[]) : undefined,
+    productFilters: withBrandVendorFilter(
+      browse.filters.length > 0 ? (browse.filters as StorefrontApiProductFilter[]) : [],
+    ),
     sortKey,
     reverse: sortKey === "PRICE" ? browse.reverse || undefined : undefined,
   };
@@ -147,15 +149,16 @@ export async function loadSearchPage({
   const products = data.search.nodes.filter(
     (node): node is SearchProductNode => node.__typename === "Product",
   );
+  const catalog = presentBrandCatalog(products, data.search.pageInfo, data.search.totalCount);
 
   return {
     performed: true,
     searchTerm,
-    products,
-    availableFilters: data.search.productFilters,
-    pageInfo: data.search.pageInfo,
+    products: catalog.products,
+    availableFilters: hideVendorFacet(data.search.productFilters),
+    pageInfo: catalog.pageInfo,
     currencyCode: data.shop.paymentSettings.currencyCode,
-    totalCount: data.search.totalCount,
+    totalCount: catalog.totalCount,
     dataSearch: url.searchParams.toString(),
     origin: url.origin,
   };

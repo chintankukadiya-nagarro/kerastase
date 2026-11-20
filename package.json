@@ -9,9 +9,11 @@
     "dev": "vite dev",
     "dev:https": "hydrogen skills check --mode=warn && vite dev",
     "preview": "react-router build && vite preview",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
     "typecheck": "react-router typegen && tsc && hydrogen gql check --fail-on-warn"
   },
   "dependencies": {
+    "@loreal/shared-cart": "file:./packages/shared-cart",
     "@remix-run/cookie": "^0.6.0",
     "@remix-run/session": "^0.4.2",
     "@shopify/hydrogen": "2026.10.2",

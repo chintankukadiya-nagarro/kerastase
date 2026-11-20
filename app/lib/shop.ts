@@ -22,7 +22,10 @@ import type { ShopAnalytics, ShopifyScriptsShop } from "@shopify/hydrogen";
 
 export const storefrontConfig = {
   storeDomain: "hydrogen-preview.myshopify.com", // ← default; or set PUBLIC_STORE_DOMAIN
-  i18n: { country: "US", language: "EN" },
+  // The shop currency is USD, and the only active market returned by the
+  // Storefront API is India. Prices still render with the currencyCode Shopify
+  // returns. This context asks for that market; it does not relabel USD as INR.
+  i18n: { country: "IN", language: "EN" },
 } as const;
 
 // Real store iff a private Storefront API token is available and the store isn't

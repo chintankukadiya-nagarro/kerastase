@@ -1,7 +1,8 @@
-import { ShopPayButton } from "@shopify/hydrogen/react";
 import { useEffect, useMemo, useState, type SubmitEvent } from "react";
 import { Link } from "react-router";
 
+import { CartCheckout } from "~/components/CartCheckout";
+import { cartHasConfirmedForeignVendor, shopifyCheckoutUrl } from "~/lib/brand";
 import { useCart, useCartForm } from "~/lib/cart";
 import { closeCartDrawer, configureOpenCartAction, CART_DRAWER_ID } from "~/lib/cart-drawer";
 import { formatPrice } from "~/lib/money";
@@ -13,7 +14,12 @@ function CartErrorBanner() {
   const [dismissedAt, setDismissedAt] = useState(0);
   const messages = useMemo(() => {
     const lines = [...errors.lines.values()].flatMap((group) => group.userErrors);
-    return [...errors.network, ...errors.cart.userErrors, ...lines].map((error) => error.message);
+    return [
+      ...errors.network,
+      ...errors.cart.userErrors,
+      ...errors.cart.warnings,
+      ...lines,
+    ].map((error) => error.message);
   }, [errors]);
 
   if (messages.length === 0 || errors.lastUpdatedAt <= dismissedAt) return null;
@@ -205,7 +211,7 @@ export function CartLineItem({
 
 function CartLines() {
   const loading = useCart((state) => state.loading);
-  const lines = useCart((state) => state.data.lines.nodes);
+  const lines = useCart((state) => state.data?.lines.nodes ?? []);
 
   if (loading) {
     return <p className="text-on-surface-secondary type-body-sm">Loading cart…</p>;
@@ -235,10 +241,10 @@ function CartFooter() {
   const cart = useCart((state) => state.data);
   const pending = useCart((state) => state.pending);
   const revalidating = useCart((state) => "revalidating" in state && state.revalidating === true);
-  const hasLines = cart.lines.nodes.length > 0;
+  const hasLines = (cart?.lines.nodes.length ?? 0) > 0;
   const isPending = hasPendingCost(pending) || revalidating;
 
-  if (!hasLines) return null;
+  if (!cart || !hasLines) return null;
 
   return (
     <div className="border-border shrink-0 border-t p-4">
@@ -257,24 +263,21 @@ function CartFooter() {
         <p className="text-on-surface-secondary text-xs">
           Taxes and shipping calculated at checkout
         </p>
-        {cart.checkoutUrl ? (
-          <>
-            <ShopPayButton width="100%" borderRadius="8px" />
-            <a
-              href={cart.checkoutUrl}
-              className="rounded-button button-primary focus-visible:outline-accent inline-flex h-11 w-full items-center justify-center gap-2 px-4 text-sm font-medium no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 motion-safe:transition-[color,background-color,border-color,transform] motion-safe:active:scale-[0.97]"
-            >
-              Checkout
-            </a>
-          </>
-        ) : null}
+        <CartCheckout
+          cartId={cart.id}
+          checkoutUrl={
+            cart.id === "gid://shopify/Cart/shared" || cartHasConfirmedForeignVendor(cart.lines.nodes)
+              ? null
+              : shopifyCheckoutUrl(cart.checkoutUrl, false)
+          }
+        />
       </div>
     </div>
   );
 }
 
 export function CartDrawer() {
-  const totalQuantity = useCart((state) => state.data.totalQuantity);
+  const totalQuantity = useCart((state) => state.data?.totalQuantity ?? 0);
   const cart = useCart((state) => state.data);
   const statusMessage = useCartStatusMessage();
 

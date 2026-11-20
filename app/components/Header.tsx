@@ -20,7 +20,7 @@ function displayCount(count: number) {
 }
 
 export function Header({ shopInfo }: { shopInfo: StorefrontShop }) {
-  const totalQuantity = useCart((state) => state.data.totalQuantity);
+  const totalQuantity = useCart((state) => state.data?.totalQuantity ?? 0);
   const [failedLogoUrl, setFailedLogoUrl] = useState<string | null>(null);
   const logo = shopInfo.logo;
 

@@ -8,6 +8,7 @@ import {
 } from "~/components/CollectionCard";
 import { HomeHero } from "~/components/HomeHero";
 import { ProductCard, PRODUCT_CARD_FRAGMENT, type ProductCardData } from "~/components/ProductCard";
+import { brandConfig, presentBrandCatalog } from "~/lib/brand";
 import { selectHomeHero } from "~/lib/home-hero";
 import { storefrontClientContext } from "~/lib/storefront";
 import {
@@ -21,18 +22,16 @@ import type { Route } from "./+types/home";
 
 const HOME_QUERY = gql(
   `
-    query Home {
-      products(first: 8, sortKey: CREATED_AT, reverse: true) {
-        nodes {
-          ...ProductCard
+    query Home($handle: String!, $vendor: String!) {
+      brandCollection: collection(handle: $handle) {
+        ...CollectionCard
+        products(first: 8, filters: [{ productVendor: $vendor }]) {
+          nodes {
+            ...ProductCard
+          }
         }
       }
-      collections(first: 3) {
-        nodes {
-          ...CollectionCard
-        }
-      }
-      heroCollections: collections(first: 1, sortKey: UPDATED_AT, reverse: true) {
+      heroCollections: collections(first: 8, query: $handle, sortKey: UPDATED_AT, reverse: true) {
         nodes {
           title
           handle
@@ -69,15 +68,20 @@ export function meta({ matches }: Route.MetaArgs) {
 
 export async function loader({ context }: Route.LoaderArgs) {
   const storefrontClient = context.get(storefrontClientContext);
-  const { data } = await storefrontClient.graphql(HOME_QUERY);
+  const { data } = await storefrontClient.graphql(HOME_QUERY, {
+    variables: { handle: brandConfig.collectionHandle, vendor: brandConfig.vendor },
+  });
 
-  // New arrivals: the most recently created products (by creation date, not
-  // publication date), newest first, in the order the Storefront API returns.
-  const featuredProducts: ProductCardData[] = data?.products.nodes ?? [];
-  const featuredCollections: CollectionCardData[] = data?.collections.nodes ?? [];
-  // The hero features the most recently updated collection, independent of the
-  // category list above.
-  const heroCollections = data?.heroCollections.nodes ?? [];
+  const catalog = presentBrandCatalog(
+    data?.brandCollection?.products.nodes ?? [],
+    { hasNextPage: false, endCursor: null },
+    data?.brandCollection?.products.nodes.length ?? 0,
+  );
+  const featuredProducts: ProductCardData[] = catalog.products;
+  const featuredCollections: CollectionCardData[] = data?.brandCollection ? [data.brandCollection] : [];
+  const heroCollections = (data?.heroCollections.nodes ?? []).filter(
+    (collection) => collection.handle === brandConfig.collectionHandle,
+  );
 
   return {
     featuredProducts,
