@@ -13,6 +13,7 @@ import {
 } from "react-router";
 
 import { CartAnalyticsTracker, PageViewedTracker } from "~/components/AnalyticsTrackers";
+import { BrandBar } from "~/components/BrandBar";
 import { AnnouncementBar } from "~/components/AnnouncementBar";
 import { CartFocusRefresh } from "~/components/CartFocusRefresh";
 import { CartDrawer } from "~/components/CartDrawer";
@@ -21,6 +22,7 @@ import { Header } from "~/components/Header";
 import { SearchDrawer } from "~/components/SearchDrawer";
 import { CartProvider } from "~/lib/cart";
 import { brandCartHandlers, loadBrandCart } from "~/lib/cart-handlers";
+import { brandBarLinks } from "~/lib/brand-bar";
 import { enforceBrandHandoff } from "~/lib/brand-routes";
 import { createRequestCustomerAccount, customerAccountContext, getCustomerSession } from "~/lib/customer-account";
 import { envContext } from "~/lib/env";
@@ -144,6 +146,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     shopInfo: layout.shopInfo,
     shopIdentity: resolveShopIdentity(env, layout.shopId || env.SHOP_ID || ""),
     currency: layout.currency,
+    brandBar: brandBarLinks(env),
   };
 }
 
@@ -192,8 +195,11 @@ export default function App({ loaderData }: Route.ComponentProps) {
       <CartFocusRefresh />
       <PageViewedTracker />
       <CartAnalyticsTracker />
-      <AnnouncementBar />
-      <Header shopInfo={loaderData.shopInfo} />
+      <div className="sticky top-0 z-40">
+        <BrandBar links={loaderData.brandBar} />
+        <AnnouncementBar />
+        <Header shopInfo={loaderData.shopInfo} />
+      </div>
       {loaderData.brandNotices.length > 0 ? (
         <div role="status" className="border-border bg-surface-secondary px-margin border-b py-3 text-sm">
           <ul role="list" className="max-w-page mx-auto grid gap-1">
@@ -225,7 +231,13 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
     stack = error.stack;
   }
 
+  const rootData = useRouteLoaderData<typeof loader>("root");
+
   return (
+    <>
+    <div className="sticky top-0 z-40">
+      <BrandBar links={rootData?.brandBar ?? brandBarLinks()} />
+    </div>
     <main
       id="main-content"
       tabIndex={-1}
@@ -239,5 +251,6 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         </pre>
       ) : null}
     </main>
+    </>
   );
 }
